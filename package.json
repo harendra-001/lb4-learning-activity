@@ -1,0 +1,18 @@
+{
+  "name": "root",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "start:order": "npm --workspace=order-service start",
+    "start:product": "npm --workspace=product-service start",
+    "start:gateway": "npm --workspace=gateway-service start",
+    "start:user": "npm --workspace=user-service start",
+    "start": "concurrently \"npm run start:product\" \"npm run start:gateway\" \"npm run start:order\" \"npm run start:user\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "lerna": "^8.1.9"
+  }
+}
