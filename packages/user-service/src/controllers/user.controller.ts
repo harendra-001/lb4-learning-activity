@@ -1,150 +1,104 @@
-import {
-  Count,
-  CountSchema,
-  Filter,
-  FilterExcludingWhere,
-  repository,
-  Where,
-} from '@loopback/repository';
-import {
-  post,
-  param,
-  get,
-  getModelSchemaRef,
-  patch,
-  put,
-  del,
-  requestBody,
-  response,
-} from '@loopback/rest';
-import {User} from '../models';
+import {repository} from '@loopback/repository';
 import {UserRepository} from '../repositories';
+import {post, requestBody} from '@loopback/rest';
+import {Credentials, User} from '../models';
+import { validateCredentials } from '../services/validator';
+import { BcryptHasher } from '../services/hash.password.bcrypt';
+import { inject } from '@loopback/core';
+import { CredentialsSchema } from './specs/user.controller.spec';
+import { MyUserService } from '../services/userAuth-service';
+import { JWTService } from '../services/jwt-service';
 
 export class UserController {
   constructor(
     @repository(UserRepository)
-    public userRepository : UserRepository,
+    public userRepository: UserRepository,
+
+    @inject('service.hasher')
+    public hasher: BcryptHasher,
+
+    @inject('services.userAuth.service')
+    public userService: MyUserService,
+
+    @inject('services.jwt.service')
+    public jwtService: JWTService
   ) {}
 
-  @post('/users')
-  @response(200, {
-    description: 'User model instance',
-    content: {'application/json': {schema: getModelSchemaRef(User)}},
-  })
-  async create(
-    @requestBody({
-      content: {
-        'application/json': {
-          schema: getModelSchemaRef(User, {
-            title: 'NewUser',
-            exclude: ['id'],
-          }),
-        },
+  @post('/users/signup', {
+    responses: {
+      '200': {
+        description: 'User created successfully',
+        content: {'application/json': {schema: {'x-ts-type': User}}},
       },
-    })
-    user: Omit<User, 'id'>,
-  ): Promise<User> {
-    return this.userRepository.create(user);
-  }
-
-  @get('/users/count')
-  @response(200, {
-    description: 'User model count',
-    content: {'application/json': {schema: CountSchema}},
-  })
-  async count(
-    @param.where(User) where?: Where<User>,
-  ): Promise<Count> {
-    return this.userRepository.count(where);
-  }
-
-  @get('/users')
-  @response(200, {
-    description: 'Array of User model instances',
-    content: {
-      'application/json': {
-        schema: {
-          type: 'array',
-          items: getModelSchemaRef(User, {includeRelations: true}),
-        },
+      '400': {
+        description: 'Bad Request',
+        content: {'application/json': {schema: {type: 'object'}}},
       },
     },
   })
-  async find(
-    @param.filter(User) filter?: Filter<User>,
-  ): Promise<User[]> {
-    return this.userRepository.find(filter);
+
+  async signup(@requestBody() userData: User) {
+    try {
+      let validateData : Credentials = {
+        email: userData.email,
+        password: userData.password
+      }
+
+      validateCredentials(validateData);
+      userData.password = await this.hasher.hashPassword(userData.password)
+      const savedUser = await this.userRepository.create(userData);
+      return {
+        id: savedUser.id,
+        name: savedUser.firstName,
+        email: savedUser.email,
+        role: savedUser.role,
+      };
+    } catch (error) {
+      // Checking unique constraint error
+      if (error.code === '23505' && error.detail.includes('email')) {
+        throw {
+          statusCode: 400,
+          message: 'Email already exists',
+          details: error.detail,
+        };
+      }
+      // Other errors
+      throw error;
+    }
   }
 
-  @patch('/users')
-  @response(200, {
-    description: 'User PATCH success count',
-    content: {'application/json': {schema: CountSchema}},
-  })
-  async updateAll(
-    @requestBody({
-      content: {
-        'application/json': {
-          schema: getModelSchemaRef(User, {partial: true}),
-        },
+  @post('/users/login', {
+    responses: {
+      '200': {
+        description: 'Login success',
+        content: {'application/json': {schema: {type: 'object', properties: {token: {type: 'string'}}}}},
       },
-    })
-    user: User,
-    @param.where(User) where?: Where<User>,
-  ): Promise<Count> {
-    return this.userRepository.updateAll(user, where);
-  }
-
-  @get('/users/{id}')
-  @response(200, {
-    description: 'User model instance',
-    content: {
-      'application/json': {
-        schema: getModelSchemaRef(User, {includeRelations: true}),
+      '401': {
+        description: 'Invalid credentials',
       },
     },
   })
-  async findById(
-    @param.path.number('id') id: number,
-    @param.filter(User, {exclude: 'where'}) filter?: FilterExcludingWhere<User>
-  ): Promise<User> {
-    return this.userRepository.findById(id, filter);
-  }
 
-  @patch('/users/{id}')
-  @response(204, {
-    description: 'User PATCH success',
-  })
-  async updateById(
-    @param.path.number('id') id: number,
+  async login(
     @requestBody({
+      description: 'Login credentials',
+      required: true,
       content: {
-        'application/json': {
-          schema: getModelSchemaRef(User, {partial: true}),
-        },
+        'application/json': {schema: CredentialsSchema},
       },
     })
-    user: User,
-  ): Promise<void> {
-    await this.userRepository.updateById(id, user);
-  }
+    credentials: {email: string; password: string},
+  ): Promise<{token: string}>{
 
-  @put('/users/{id}')
-  @response(204, {
-    description: 'User PUT success',
-  })
-  async replaceById(
-    @param.path.number('id') id: number,
-    @requestBody() user: User,
-  ): Promise<void> {
-    await this.userRepository.replaceById(id, user);
-  }
+    const user = await this.userService.verifyCredentials(credentials);
+    console.log(user);
 
-  @del('/users/{id}')
-  @response(204, {
-    description: 'User DELETE success',
-  })
-  async deleteById(@param.path.number('id') id: number): Promise<void> {
-    await this.userRepository.deleteById(id);
+    const userProfile = this.userService.convertToUserProfile(user);
+    console.log(userProfile);
+
+
+    // GEnerate token
+    const token = await this.jwtService.generateToken(userProfile)
+    return Promise.resolve({token});
   }
 }

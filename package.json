@@ -14,5 +14,9 @@
   "devDependencies": {
     "concurrently": "^9.1.2",
     "lerna": "^8.1.9"
+  },
+  "dependencies": {
+    "@types/jsonwebtoken": "^9.0.7",
+    "jsonwebtoken": "^9.0.2"
   }
 }

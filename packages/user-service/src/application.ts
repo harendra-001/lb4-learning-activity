@@ -9,6 +9,10 @@ import {RestApplication} from '@loopback/rest';
 import {ServiceMixin} from '@loopback/service-proxy';
 import path from 'path';
 import {MySequence} from './sequence';
+import { BcryptHasher } from './services/hash.password.bcrypt';
+import { MyUserService } from './services/userAuth-service';
+import { JWTService } from './services/jwt-service';
+// import { JWTService } from './services/jwt-service';
 
 export {ApplicationConfig};
 
@@ -17,6 +21,9 @@ export class UserServiceApplication extends BootMixin(
 ) {
   constructor(options: ApplicationConfig = {}) {
     super(options);
+
+    // Set up bindings
+    this.setupBinding();
 
     // Set up the custom sequence
     this.sequence(MySequence);
@@ -40,5 +47,13 @@ export class UserServiceApplication extends BootMixin(
         nested: true,
       },
     };
+  }
+  setupBinding(): void {
+    this.bind('service.hasher').toClass(BcryptHasher);
+    this.bind('round').to(10);
+    this.bind('services.userAuth.service').toClass(MyUserService);
+    this.bind('services.jwt.service').toClass(JWTService);
+    this.bind('authentication.jwt.secret').to('adfasdkfjadjfald');
+    this.bind('authentication.jwt.expiresIn').to('1h');
   }
 }
