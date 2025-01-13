@@ -25,7 +25,7 @@ export class UserServiceApplication extends BootMixin(
   constructor(options: ApplicationConfig = {}) {
     super(options);
 
-     // Add OpenAPI security specifications
+     // Add OpenAPI security specification
     this.api({
       openapi: '3.0.0',
       info: {title: 'MyApp API', version: '1.0.0'},
