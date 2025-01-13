@@ -7,51 +7,54 @@ import { HttpErrors } from "@loopback/rest";
 import { inject } from "@loopback/core";
 import { BcryptHasher } from "./hash.password.bcrypt";
 
-export class MyUserService implements UserService<User, Credentials>{
+export class MyUserService implements UserService<User, Credentials> {
 
-    constructor(
-        @repository(UserRepository)
-        public userRepository: UserRepository,
+  constructor(
+    @repository(UserRepository)
+    public userRepository: UserRepository,
 
-        @inject('service.hasher')
-        public hasher: BcryptHasher
-    ){}
-    async verifyCredentials(credentials: Credentials): Promise<User> {
-        // Find user
-        const foundUser = await this.userRepository.findOne({
-            where:{
-                email: credentials.email
-            }
-        })
+    @inject('service.hasher')
+    public hasher: BcryptHasher
+  ) {}
 
-        if(!foundUser){
-            throw new HttpErrors.NotFound(`user not found with this ${credentials.email}`);
-        }
+  async verifyCredentials(credentials: Credentials): Promise<User> {
+    // Find user by email
+    const foundUser = await this.userRepository.findOne({
+      where: {
+        email: credentials.email
+      }
+    });
 
-        const passworedMatched = await this.hasher.compparePassword(credentials.password, foundUser.password);
-        if(!passworedMatched){
-            throw new HttpErrors.Unauthorized('Password is not valid')
-        }
-
-        return foundUser;
+    if (!foundUser) {
+      throw new HttpErrors.NotFound(`User not found with email: ${credentials.email}`);
     }
-    
-    convertToUserProfile(user: User): UserProfile {
-        let userName = '';
 
-        if(user.firstName){
-            userName = user.firstName;
-        }
-
-        if(user.lastName){
-            userName = userName + ' ' + user.lastName;
-        }
-
-        return {
-            [securityId]: `${user.id}`,
-            name: userName,
-            role: user.role
-          };
+    // Compare passwords
+    const passwordMatched = await this.hasher.compparePassword(credentials.password, foundUser.password);
+    if (!passwordMatched) {
+      throw new HttpErrors.Unauthorized('Password is not valid');
     }
+
+    return foundUser;
+  }
+
+  convertToUserProfile(user: User): UserProfile {
+    let userName = '';
+
+    if (user.firstName) {
+      userName = user.firstName;
+    }
+
+    if (user.lastName) {
+      userName = `${userName} ${user.lastName}`;
+    }
+
+    return {
+      [securityId]: `${user.id}`,
+      name: userName,
+      role: user.role,
+      id: `${user.id}`,
+    };
+  }
 
 }

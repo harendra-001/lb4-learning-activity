@@ -1,5 +1,6 @@
 import {ApplicationConfig, UserServiceApplication} from './application';
-import 'dotenv/config'
+import 'reflect-metadata'
+// import 'dotenv/config'
 
 export * from './application';
 

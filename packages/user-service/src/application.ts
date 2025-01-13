@@ -12,6 +12,8 @@ import {MySequence} from './sequence';
 import { BcryptHasher } from './services/hash.password.bcrypt';
 import { MyUserService } from './services/userAuth-service';
 import { JWTService } from './services/jwt-service';
+import { AuthenticationComponent, registerAuthenticationStrategy } from '@loopback/authentication';
+import { JWTAuthenticationStrategy } from './authentication-strategies/jwt.strategy';
 // import { JWTService } from './services/jwt-service';
 
 export {ApplicationConfig};
@@ -21,6 +23,30 @@ export class UserServiceApplication extends BootMixin(
 ) {
   constructor(options: ApplicationConfig = {}) {
     super(options);
+
+     // Add OpenAPI security specification
+    this.api({
+      openapi: '3.0.0',
+      info: {title: 'MyApp API', version: '1.0.0'},
+      paths: {},
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+          },
+        },
+      },
+      security: [{bearerAuth: []}], // Apply bearerAuth globally
+    });
+
+
+    // Add authentication component
+    this.component(AuthenticationComponent);
+
+    // Register JWT authentication strategy
+    registerAuthenticationStrategy(this, JWTAuthenticationStrategy);
 
     // Set up bindings
     this.setupBinding();

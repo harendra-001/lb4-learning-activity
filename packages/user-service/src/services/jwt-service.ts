@@ -1,20 +1,16 @@
-import {promisify} from 'util';
 import jwt from 'jsonwebtoken';
-import {HttpErrors} from '@loopback/rest';
-import {UserProfile, securityId} from '@loopback/security';
-import {inject} from '@loopback/core';
+import { HttpErrors } from '@loopback/rest';
+import { UserProfile, securityId } from '@loopback/security';
+import { inject } from '@loopback/core';
 
-// Cast promisify(jwt.sign) to unknown first, then to the correct type
-const signAsync = promisify(jwt.sign) as unknown as (
-  payload: string | object | Buffer,
-  secretOrPrivateKey: string,
-  options?: jwt.SignOptions
-) => Promise<string>;
+export interface TokenPayload {
+  name: string;
+}
 
 export class JWTService {
   constructor(
     @inject('authentication.jwt.secret')
-    private jwtSecret: string,
+    private jwtSecret: string, 
 
     @inject('authentication.jwt.expiresIn')
     private jwtExpiresIn: string,
@@ -27,19 +23,48 @@ export class JWTService {
       );
     }
 
-    const payload = {
-      name: userProfile.name,
-      role: userProfile.role,
-      id: userProfile[securityId]
-    };
-
     try {
-      const token = await signAsync(payload, this.jwtSecret, {
+      // const payload: UserProfile = {
+      //   // id: userProfile.id as string,
+      //   name: userProfile.name as string,
+      //   role: userProfile.role as string,
+      //   [securityId]: `${userProfile.id}`
+      // };
+      
+
+      const payload: TokenPayload = {
+        // id: userProfile.id as string,
+        name: userProfile.name as string,
+      };
+
+      const token = jwt.sign(payload, this.jwtSecret, {
         expiresIn: this.jwtExpiresIn,
       });
       return token;
-    } catch (error) {
+    } catch (error: any) {
       throw new HttpErrors.Unauthorized(`Error generating token: ${error.message}`);
+    }
+  }
+
+  async verifyToken(token: string): Promise<TokenPayload> {
+    try {
+      console.log("Verifying Token:", token);
+      const decoded = jwt.verify(token, this.jwtSecret) as TokenPayload;
+      console.log("dasdf" + decoded);
+
+      // const userProfile: UserProfile = {
+      //   [securityId]: decoded.id,
+      //   name: decoded.name,
+      //   role: decoded.role,
+      // };
+
+      const userProfile: TokenPayload = {
+        name: decoded.name,
+      };
+
+      return userProfile;
+    } catch (error: any) {
+      throw new HttpErrors.Unauthorized(`Error verifying token: ${error.message}`);
     }
   }
 }
