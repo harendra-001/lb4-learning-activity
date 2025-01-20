@@ -1,5 +1,5 @@
 import {BootMixin} from '@loopback/boot';
-import {ApplicationConfig} from '@loopback/core';
+import {ApplicationConfig, BindingKey, BindingScope, Provider} from '@loopback/core';
 import {
   RestExplorerBindings,
   RestExplorerComponent,
@@ -9,26 +9,31 @@ import {RestApplication} from '@loopback/rest';
 import {ServiceMixin} from '@loopback/service-proxy';
 import path from 'path';
 import {MySequence} from './sequence';
-import { BcryptHasher } from './services/hash.password.bcrypt';
-import { MyUserService } from './services/userAuth-service';
-import { JWTService } from './services/jwt-service';
-import { AuthenticationComponent, registerAuthenticationStrategy } from '@loopback/authentication';
-import { JWTAuthenticationStrategy } from './authentication-strategies/jwt.strategy';
-// import { JWTService } from './services/jwt-service';
+import {BcryptHasher} from './services/hash.password.bcrypt';
+import {JWTService} from './services/jwt-service';
+import {
+  AuthenticationComponent,
+  registerAuthenticationStrategy,
+} from '@loopback/authentication';
+import {JWTAuthenticationStrategy} from './authentication-strategies/jwt.strategy';
+import {AuthorizationInterceptor, AUTHORIZATION_INTERCEPTOR_BINDING_KEY} from './interceptors/authorization.interceptor';
+import * as dotenv from 'dotenv';
+import { MyUserService } from './services/user-auth-service.ts';
+
+dotenv.config();
 
 export {ApplicationConfig};
 
 export class UserServiceApplication extends BootMixin(
   ServiceMixin(RepositoryMixin(RestApplication)),
-  
 ) {
   constructor(options: ApplicationConfig = {}) {
     super(options);
 
-     // Add OpenAPI security specification
+    // Customize OpenAPI spec with security scheme
     this.api({
       openapi: '3.0.0',
-      info: {title: 'MyApp API', version: '1.0.0'},
+      info: {title: 'My API', version: '1.0.0'},
       paths: {},
       components: {
         securitySchemes: {
@@ -39,24 +44,18 @@ export class UserServiceApplication extends BootMixin(
           },
         },
       },
-      security: [{bearerAuth: []}], // Apply bearerAuth globally
+      security: [
+        {
+          bearerAuth: [],
+        },
+      ],
     });
 
-
-    // Add authentication component
-    this.component(AuthenticationComponent);
-
-    // Register JWT authentication strategy
-    registerAuthenticationStrategy(this, JWTAuthenticationStrategy);
-
-    // Set up bindings
-    this.setupBinding();
-
-    // Set up the custom sequence
     this.sequence(MySequence);
 
-    // Set up default home page
-    this.static('/', path.join(__dirname, '../public'));
+     // Set up default home page
+     this.static('/', path.join(__dirname, '../public'));
+
 
     // Customize @loopback/rest-explorer configuration here
     this.configure(RestExplorerBindings.COMPONENT).to({
@@ -64,6 +63,26 @@ export class UserServiceApplication extends BootMixin(
     });
     this.component(RestExplorerComponent);
 
+    // Bind services
+    this.bind('service.hasher').toClass(BcryptHasher);
+    this.bind('services.userAuth.service').toClass(MyUserService);
+    this.bind('services.jwt.service').toClass(JWTService);
+
+    // JWT Configuration using environment variables
+    this.bind('jwt.secret').to(process.env.JWT_SECRET || 'kdjaskjdlasd');
+    this.bind('jwt.expiresIn').to(process.env.JWT_EXPIRES_IN || '1h');
+
+    // Register authentication component
+    this.component(AuthenticationComponent);
+    registerAuthenticationStrategy(this, JWTAuthenticationStrategy);
+
+
+    // Bind Authorization Interceptor
+    this.bind(AUTHORIZATION_INTERCEPTOR_BINDING_KEY)
+      .toProvider(AuthorizationInterceptor)
+      .inScope(BindingScope.TRANSIENT);
+
+    // Ensure that boot options are correctly set
     this.projectRoot = __dirname;
     // Customize @loopback/boot Booter Conventions here
     this.bootOptions = {
@@ -74,13 +93,5 @@ export class UserServiceApplication extends BootMixin(
         nested: true,
       },
     };
-  }
-  setupBinding(): void {
-    this.bind('service.hasher').toClass(BcryptHasher);
-    this.bind('round').to(10);
-    this.bind('services.userAuth.service').toClass(MyUserService);
-    this.bind('services.jwt.service').toClass(JWTService);
-    this.bind('authentication.jwt.secret').to('adfasdkfjadjfald');
-    this.bind('authentication.jwt.expiresIn').to('1h');
   }
 }

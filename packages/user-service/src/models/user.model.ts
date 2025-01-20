@@ -1,6 +1,6 @@
 import {Entity, model, property} from '@loopback/repository';
-import { Role } from './role.enum';
-import { FormattedDate } from '../decorators/date.decorator';
+import {Role} from './role.enum';
+import {FormattedDate} from '../decorators/date.decorator';
 
 export type Credentials = {
   email: string;
@@ -11,13 +11,12 @@ export type Credentials = {
   settings: {
     indexes: {
       uniqueEmail: {
-        keys: {email: 1}, // Define the column to be unique
-        options: {unique: true}, // Enforce uniqueness
+        keys: {email: 1},
+        options: {unique: true},
       },
     },
   },
 })
-
 export class User extends Entity {
   @property({
     type: 'number',
@@ -53,11 +52,9 @@ export class User extends Entity {
   @property({
     type: 'string',
     required: true,
-
-    jsonSchema:{
-      enum: Object.values(Role)
-    }
-
+    jsonSchema: {
+      enum: Object.values(Role),
+    },
   })
   role: Role;
 
@@ -77,5 +74,3 @@ export interface UserRelations {
 }
 
 export type UserWithRelations = User & UserRelations;
-
-
