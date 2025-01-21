@@ -8,7 +8,9 @@ import {RepositoryMixin} from '@loopback/repository';
 import {RestApplication} from '@loopback/rest';
 import {ServiceMixin} from '@loopback/service-proxy';
 import path from 'path';
-import {MySequence} from './sequence';
+
+import { LoggingInterceptor } from './interceptors/logging.interceptor';
+import { MySequence } from './sequence';
 
 export {ApplicationConfig};
 
@@ -20,6 +22,16 @@ export class GatewayServiceApplication extends BootMixin(
 
     // Set up the custom sequence
     this.sequence(MySequence);
+
+    // Bind Logging Interceptor
+    this.bind('interceptors.logging').toProvider(LoggingInterceptor);
+
+
+    // Add it as a global interceptor
+    this.interceptor(LoggingInterceptor, {
+      global: true, // Apply globally to all methods
+      group: 'logging',
+    });
 
     // Set up default home page
     this.static('/', path.join(__dirname, '../public'));

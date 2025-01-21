@@ -22,7 +22,7 @@ export class GatewayController {
         // NExt task: Use rest connector at axios
         const orderResponse = await axios.get(`${this.orderServiceUrl}/orders/${orderId}`);
         order = orderResponse.data;
-        console.log('Order Response:', order);
+        // console.log('Order Response:', order);
       } catch (error) {
         console.error('Error fetching order:', error.message);
         throw error;
@@ -31,7 +31,7 @@ export class GatewayController {
     try {
         const productResponse = await axios.get(`${this.productServiceUrl}/products/${order.productId}`);
         product = productResponse.data;
-        console.log('Product Response:', product);
+        // console.log('Product Response:', product);
       } catch (error) {
         console.error('Error fetching product:', error.message);
         throw error;
@@ -40,7 +40,7 @@ export class GatewayController {
       try {
         const userResponse = await axios.get(`${this.userServiceUrl}/users/${order.customerId}`);
         user = userResponse.data;
-        console.log('User Response:', user);
+        // console.log('User Response:', user);
       } catch (error) {
         console.error('Error fetching user:', error.message);
         throw error;

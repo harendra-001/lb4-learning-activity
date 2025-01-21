@@ -9,14 +9,24 @@
     "start:product": "npm --workspace=product-service start",
     "start:gateway": "npm --workspace=gateway-service start",
     "start:user": "npm --workspace=user-service start",
-    "start": "concurrently \"npm run start:product\" \"npm run start:gateway\" \"npm run start:order\" \"npm run start:user\""
+    "start": "concurrently \"npm run start:product\" \"npm run start:gateway\" \"npm run start:order\" \"npm run start:user\"",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@sourceloop/cli": "^9.2.3",
     "concurrently": "^9.1.2",
-    "lerna": "^8.1.9"
+    "eslint": "^8.57.1",
+    "globals": "^15.14.0",
+    "lerna": "^8.1.9",
+    "typescript-eslint": "^8.21.0"
   },
   "dependencies": {
+    "@sourceloop/notification-service": "^14.0.2",
     "@types/jsonwebtoken": "^9.0.7",
-    "jsonwebtoken": "^9.0.2"
+    "cors": "^2.8.5",
+    "jsonwebtoken": "^9.0.2",
+    "loopback4-notifications": "^9.0.1"
   }
 }

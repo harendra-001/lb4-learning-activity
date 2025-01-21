@@ -1,7 +1,7 @@
 
 import {repository} from '@loopback/repository';
 import {UserRepository} from '../repositories';
-import {get, post, requestBody, HttpErrors} from '@loopback/rest';
+import {get, post, requestBody, HttpErrors, param} from '@loopback/rest';
 import {Credentials, User} from '../models';
 import {validateCredentials} from '../services/validator';
 import {BcryptHasher} from '../services/hash.password.bcrypt';
@@ -126,37 +126,45 @@ export class UserController {
     return currentUserProfile;
   }
 
-  // @get('/admin/dashboard', {
-  //   responses: {
-  //     '200': {
-  //       description: 'Admin dashboard',
-  //       content: {'application/json': {schema: {type: 'object'}}},
-  //     },
-  //   },
-  // })
-  // @authenticate('jwt')
-  // @Roles(Role.Admin, Role.SuperAdmin)
-  // async adminDashboard(
-  //   @inject(SecurityBindings.USER) currentUserProfile: UserProfile,
-  // ): Promise<object> {
-  //   // Your admin logic here
-  //   return {message: 'Welcome to the Admin Dashboard'};
-  // }
+  @get('/users/{id}', {
+    responses: {
+      '200': {
+        description: 'User found',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                id: {type: 'number'},
+                name: {type: 'string'},
+                email: {type: 'string'},
+              },
+            },
+          },
+        },
+      },
+      '404': {
+        description: 'User not found',
+      },
+    },
+  })
+  async getUserById(@param.path.number('id') id: number): Promise<{id: number; name: string; email: string}> {
+    // Find the user by ID
+    const user = await this.userRepository.findById(id, {
+      fields: {id: true, firstName: true, lastName: true, email: true},
+    });
+  
+    if (!user) {
+      throw new HttpErrors.NotFound(`User with id ${id} not found`);
+    }
+  
+    // Return only metadata
+    return {
+      id: user.id!,
+      name: `${user.firstName} ${user.lastName}`,
+      email: user.email,
+    };
+  }
+  
 
-  // @get('/subscriber/content', {
-  //   responses: {
-  //     '200': {
-  //       description: 'Subscriber content',
-  //       content: {'application/json': {schema: {type: 'object'}}},
-  //     },
-  //   },
-  // })
-  //   @authenticate('jwt')
-  //   @Roles(Role.Subscriber, Role.Admin, Role.SuperAdmin)
-  // async subscriberContent(
-  //   @inject(SecurityBindings.USER) currentUserProfile: UserProfile,
-  // ): Promise<object> {
-  //   // subscriber logic here
-  //   return {content: 'Exclusive subscriber content'};
-  // }
 }

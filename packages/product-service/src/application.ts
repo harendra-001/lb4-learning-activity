@@ -5,12 +5,17 @@ import {
   RestExplorerComponent,
 } from '@loopback/rest-explorer';
 import {RepositoryMixin} from '@loopback/repository';
-import {RestApplication} from '@loopback/rest';
+import {RestApplication, RestBindings} from '@loopback/rest';
 import {ServiceMixin} from '@loopback/service-proxy';
 import path from 'path';
 import {MySequence} from './sequence';
+import * as dotenv from 'dotenv';
+import cors from 'cors'; 
 
 export {ApplicationConfig};
+
+dotenv.config();
+
 
 export class ProductServiceApplication extends BootMixin(
   ServiceMixin(RepositoryMixin(RestApplication)),
